@@ -37,7 +37,6 @@ public class Response implements Serializable {
 
     public Response(String code, String message) {
         this.code = "ok";
-        this.code = code;
         this.message = message;
         this.requestid = UUID.randomUUID().toString().replaceAll("-", "");
     }

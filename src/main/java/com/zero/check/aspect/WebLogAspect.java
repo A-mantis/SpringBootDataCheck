@@ -1,8 +1,10 @@
 package com.zero.check.aspect;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.util.IOUtils;
 import com.zero.check.exception.UserInfoException;
 import com.zero.check.utils.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.slf4j.Logger;
@@ -29,11 +31,10 @@ import java.util.Optional;
  * @since: 2019/11/21 13:47
  * @history: 1.2019/11/21 created by wei.wang
  */
-
+@Slf4j
 @Aspect
 @Component
 public class WebLogAspect {
-    private Logger logger = LoggerFactory.getLogger(WebLogAspect.class);
 
     private final String REQUEST_GET = "GET";
 
@@ -53,21 +54,39 @@ public class WebLogAspect {
      *
      * @param joinPoint 切点
      */
-    @Before("webLog() &&args(..,bindingResult)")
-    public void doBefore(JoinPoint joinPoint, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            FieldError error = bindingResult.getFieldError();
-            throw new UserInfoException(Response.error(error.getDefaultMessage()).setData(error));
-        }
+    @Before("webLog()")
+    public void doBefore(JoinPoint joinPoint) {
+        //logger.info("Info : " + joinPoint.getSignature().toString());
         //获取请求参数
         try {
             String reqBody = this.getReqBody();
-            logger.info("REQUEST: " + reqBody);
+            log.info("REQUEST: {}", reqBody);
         } catch (Exception ex) {
-            logger.info("get Request Error: " + ex.getMessage());
+            log.info("get Request Error: {}", ex.getMessage());
         }
 
     }
+
+//    /**
+//     * 前置通知，在切点之前执行的通知
+//     *
+//     * @param joinPoint 切点
+//     */
+//    @Before("webLog() &&args(..,bindingResult)")
+//    public void doBefore(JoinPoint joinPoint, BindingResult bindingResult) {
+//        if (bindingResult.hasErrors()) {
+//            FieldError error = bindingResult.getFieldError();
+//            throw new UserInfoException(Response.error(error.getDefaultMessage()).setData(error));
+//        }
+//        //获取请求参数
+//        try {
+//            String reqBody = this.getReqBody();
+//            logger.info("REQUEST: " + reqBody);
+//        } catch (Exception ex) {
+//            logger.info("get Request Error: " + ex.getMessage());
+//        }
+//
+//    }
 
     /**
      * 后置通知，切点后执行
@@ -78,9 +97,9 @@ public class WebLogAspect {
     public void doAfterReturning(Object ret) {
         //处理完请求，返回内容
         try {
-            logger.info("RESPONSE: " + JSON.toJSONString(ret));
+            log.info("RESPONSE: {}", JSON.toJSONString(ret));
         } catch (Exception ex) {
-            logger.info("get Response Error: " + ex.getMessage());
+            log.info("get Response Error: {}", ex.getMessage());
         }
 
     }
@@ -140,17 +159,18 @@ public class WebLogAspect {
      * @return 返回POST参数
      */
     private String getPostReqBody(HttpServletRequest request) {
-        StringBuilder stringBuilder = new StringBuilder();
         try (InputStream inputStream = request.getInputStream();
-             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
+             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, IOUtils.UTF8))) {
+            StringBuilder stringBuilder = new StringBuilder();
             char[] charBuffer = new char[128];
             int bytesRead = -1;
             while ((bytesRead = bufferedReader.read(charBuffer)) > 0) {
                 stringBuilder.append(charBuffer, 0, bytesRead);
             }
+            return stringBuilder.toString();
         } catch (IOException e) {
-            logger.info("get Post Request Parameter err : " + e.getMessage());
+            log.info("Post Request Parameter Error : {}", e.getMessage());
         }
-        return stringBuilder.toString();
+        return "Post Request Parameter Error";
     }
 }
